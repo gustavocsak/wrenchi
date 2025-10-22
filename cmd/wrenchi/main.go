@@ -1,11 +1,16 @@
 package main
 
-import "fmt"
-import "wrenchi/internal/memory"
+import (
+	"fmt"
+	"wrenchi/internal/memory"
+	"wrenchi/internal/display"
+)
 
 func main() {
 	fmt.Println("System Diagnostic Tool starting...")
-	mockData, error := memory.GetMemoryInfo()
-	fmt.Println("Success:", mockData)
-	fmt.Println("error:", error)
+	memInfo, error := memory.GetMemoryInfo()
+	if error != nil {
+		fmt.Println("error")
+	}
+	display.PrintMemoryInfo(memInfo)
 }

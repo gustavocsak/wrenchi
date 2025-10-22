@@ -50,7 +50,38 @@ func GetMemoryInfo() (*MemoryInfo, error) {
 				memInfo.Available = value
 			}
 
+		case "Buffers:":
+			value, err := strconv.ParseUint(valueStr, 10, 64)	
+
+			if err == nil {
+				memInfo.Buffers = value
+			}
+
+		case "Cached:":
+			value, err := strconv.ParseUint(valueStr, 10, 64)	
+
+			if err == nil {
+				memInfo.Cached = value
+			}
+
+
+		case "SwapTotal:":
+			value, err := strconv.ParseUint(valueStr, 10, 64)	
+
+			if err == nil {
+				memInfo.SwapTotal = value
+			}
+
+		case "SwapFree:":
+			value, err := strconv.ParseUint(valueStr, 10, 64)	
+
+			if err == nil {
+				memInfo.SwapFree = value
+			}
+
 		}
+
+
 	}
 
 	return memInfo, nil
