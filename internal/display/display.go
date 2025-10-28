@@ -2,9 +2,10 @@ package display
 
 import (
 	"fmt"
-	"wrenchi/internal/memory"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/lipgloss"
+	"sort"
+	"wrenchi/internal/memory"
 )
 
 func PrintMemoryInfo(info *memory.MemoryInfo) {
@@ -16,19 +17,17 @@ func PrintMemoryInfo(info *memory.MemoryInfo) {
 	fmt.Printf(format, "Buffers:", formatMemory(info.Buffers))
 	fmt.Printf(format, "Cached:", formatMemory(info.Cached))
 
-	memUsedRatio := (float64(info.Total - info.Available) / float64(info.Total)) * 100.0
+	memUsedRatio := (float64(info.Total-info.Available) / float64(info.Total)) * 100.0
 	memBar := progress.New(progress.WithWidth(40))
 	memBar.FullColor = "41"
 	memTextStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("91"))
-	fmt.Printf(format, "Memory Usage:", memTextStyle.Render(memBar.ViewAs(memUsedRatio / 100.0)))
-
-
+	fmt.Printf(format, "Memory Usage:", memTextStyle.Render(memBar.ViewAs(memUsedRatio/100.0)))
 
 	fmt.Println("\n---Swap Usage---")
 	fmt.Printf(format, "Total Swap:", formatMemory(info.SwapTotal))
 	fmt.Printf(format, "Free Swap:", formatMemory(info.SwapFree))
 
-	swapUsedKB := float64(info.SwapTotal - info.SwapFree) 
+	swapUsedKB := float64(info.SwapTotal - info.SwapFree)
 	var swapUsedRatio float64
 	if info.SwapTotal > 0 {
 		swapUsedRatio = (swapUsedKB / float64(info.SwapTotal)) * 100
@@ -38,9 +37,24 @@ func PrintMemoryInfo(info *memory.MemoryInfo) {
 	swapBar.FullColor = "31"
 	swapTextStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("91"))
 	swapBar.SetPercent(swapUsedRatio / 100.0)
-	fmt.Printf(format, "Swap Usage:", swapTextStyle.Render(swapBar.ViewAs(swapUsedRatio / 100.0)))
+	fmt.Printf(format, "Swap Usage:", swapTextStyle.Render(swapBar.ViewAs(swapUsedRatio/100.0)))
 }
 
+func PrintProcesses(processes []memory.Process) {
+	sort.Slice(processes, func(i, j int) bool {
+		return processes[i].VmRSS > processes[j].VmRSS
+	})
+	const format = "%-6d %-30s %-3s %-10s\n"
+
+	for i := 0; i < 5; i++ {
+		p := processes[i]
+		fmt.Printf(format, p.Pid, p.Name, p.State, formatMemory(p.VmRSS))
+	}
+
+	// for _, p := range processes {
+	// 	fmt.Printf(format, p.Pid, p.Name, p.State, p.VmRSS)
+	// }
+}
 
 func formatMemory(kb uint64) string {
 	const (
@@ -55,6 +69,6 @@ func formatMemory(kb uint64) string {
 	if kb > mb {
 		return fmt.Sprintf("%.2f MB", float64(kb)/float64(mb))
 	}
-	
+
 	return fmt.Sprintf("%d KB", kb)
 }
