@@ -3,8 +3,10 @@ package display
 import (
 	"fmt"
 	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
 	"sort"
+	"strconv"
 	"wrenchi/internal/memory"
 )
 
@@ -38,22 +40,50 @@ func PrintMemoryInfo(info *memory.MemoryInfo) {
 	swapTextStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("91"))
 	swapBar.SetPercent(swapUsedRatio / 100.0)
 	fmt.Printf(format, "Swap Usage:", swapTextStyle.Render(swapBar.ViewAs(swapUsedRatio/100.0)))
+	fmt.Println()
 }
 
-func PrintProcesses(processes []memory.Process) {
+func PrintProcesses(processes []memory.Process, limit int) {
 	sort.Slice(processes, func(i, j int) bool {
 		return processes[i].VmRSS > processes[j].VmRSS
 	})
 	const format = "%-6d %-30s %-3s %-10s\n"
+	var baseStyle = lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240"))
 
-	for i := 0; i < 5; i++ {
-		p := processes[i]
-		fmt.Printf(format, p.Pid, p.Name, p.State, formatMemory(p.VmRSS))
+	columns := []table.Column{
+		{Title: "Pid", Width: 6},
+		{Title: "Name", Width: 20},
+		{Title: "State", Width: 6},
+		{Title: "Memory Usage", Width: 15},
 	}
 
-	// for _, p := range processes {
-	// 	fmt.Printf(format, p.Pid, p.Name, p.State, p.VmRSS)
-	// }
+	rows := []table.Row{}
+
+	for _, p := range processes[:limit] {
+		pid := strconv.FormatUint(p.Pid, 10)
+		vmrssStr := formatMemory(p.VmRSS)
+		rows = append(rows, table.Row{pid, p.Name, p.State, vmrssStr})
+	}
+
+	t := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rows),
+		table.WithFocused(true),
+		table.WithHeight(limit+2),
+	)
+
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true).
+		Bold(false)
+
+	t.SetStyles(s)
+
+	fmt.Println(baseStyle.Render(t.View()))
 }
 
 func formatMemory(kb uint64) string {

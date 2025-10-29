@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	// "path/filepath"
 	"strconv"
 	"strings"
 )
@@ -120,7 +119,7 @@ func ReadProcStatus() ([]Process, error) {
 
 					switch key {
 					case "Name:":
-						process.Name = valueStr
+						process.Name = strings.Join(parts[1:], " ")
 
 					case "Pid:":
 						pid, err := strconv.ParseUint(valueStr, 10, 64)

@@ -1,23 +1,43 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
+	"os"
 	"wrenchi/internal/display"
 	"wrenchi/internal/memory"
 )
 
 func main() {
-	fmt.Println("System Diagnostic Tool starting...")
-	memInfo, error := memory.ReadMemInfo()
-	if error != nil {
-		fmt.Println("error")
+	if len(os.Args) < 2 {
+		log.Fatal("must provide subcommand\n")
+		os.Exit(1)
 	}
-	display.PrintMemoryInfo(memInfo)
 
-	processes, err := memory.ReadProcStatus()
-	if err != nil {
-		fmt.Println("error")
+	subCommand := os.Args[1]
+
+	switch subCommand {
+	case "memory":
+		memoryCmd := flag.NewFlagSet("memory", flag.ExitOnError)
+		showTopMem := memoryCmd.Int("t", 0, "Show top t processes by memory use")
+		memoryCmd.Parse(os.Args[2:])
+		memInfo, error := memory.ReadMemInfo()
+		if error != nil {
+			fmt.Println("error")
+		}
+		display.PrintMemoryInfo(memInfo)
+		if *showTopMem != 0 {
+			processes, err := memory.ReadProcStatus()
+			if err != nil {
+				fmt.Println("error")
+			}
+			display.PrintProcesses(processes, *showTopMem)
+		}
+
+	default:
+		log.Fatalf("Invalid subcommand: %s", subCommand)
+		os.Exit(1)
 	}
-	// probably would pass flags here?
-	display.PrintProcesses(processes)
+
 }
