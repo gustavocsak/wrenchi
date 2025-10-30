@@ -3,6 +3,7 @@ package memory
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -10,13 +11,17 @@ import (
 
 func ReadMemInfo() (*MemoryInfo, error) {
 	file, err := os.Open("/proc/meminfo")
+
 	if err != nil {
 		return nil, err
 	}
-
 	defer file.Close()
+	return ParseMemInfo(file)
+}
+
+func ParseMemInfo(r io.Reader) (*MemoryInfo, error) {
 	memInfo := &MemoryInfo{}
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(r)
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -115,23 +120,23 @@ func ReadProcStatus() ([]Process, error) {
 					}
 
 					key := parts[0]
-					valueStr := parts[1]
+					value := parts[1]
 
 					switch key {
 					case "Name:":
 						process.Name = strings.Join(parts[1:], " ")
 
 					case "Pid:":
-						pid, err := strconv.ParseUint(valueStr, 10, 64)
+						pid, err := strconv.ParseUint(value, 10, 64)
 						if err == nil {
 							process.Pid = pid
 						}
 
 					case "State:":
-						process.State = valueStr
+						process.State = value
 
 					case "VmRSS:":
-						vmrss, err := strconv.ParseUint(valueStr, 10, 64)
+						vmrss, err := strconv.ParseUint(value, 10, 64)
 						if err == nil {
 							process.VmRSS = vmrss
 						}
