@@ -60,6 +60,7 @@ func PrintProcesses(processes []memory.Process, limit int, info *memory.MemoryIn
 		{Title: "State", Width: 6},
 		{Title: "Memory Usage", Width: 15},
 		{Title: "%MEM", Width: 6},
+		{Title: "Command", Width: 30},
 	}
 
 	rows := []table.Row{}
@@ -69,7 +70,7 @@ func PrintProcesses(processes []memory.Process, limit int, info *memory.MemoryIn
 		vmrssStr := formatMemory(p.VmRSS)
 		memPercentage := (float64(p.VmRSS) / float64(info.Total)) * 100.0
 		memPercentageStr := fmt.Sprintf("%.2f%%", memPercentage)
-		rows = append(rows, table.Row{pid, p.Name, p.User, p.State, vmrssStr, memPercentageStr})
+		rows = append(rows, table.Row{pid, p.Name, p.User, p.State, vmrssStr, memPercentageStr, p.Cmd})
 	}
 
 	t := table.New(

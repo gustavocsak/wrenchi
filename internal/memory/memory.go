@@ -2,6 +2,7 @@ package memory
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -125,7 +126,42 @@ func openProcessFile(pid uint64) (Process, error) {
 	defer file.Close()
 
 	p := ParseProcess(file)
+
+	cmd, err := readCmdLine(pid)
+	if err == nil && cmd != "" {
+		p.Cmd = cmd
+	}
+
 	return p, nil
+}
+
+func readCmdLine(pid uint64) (string, error) {
+	cmdFileName := fmt.Sprintf("/proc/%d/cmdline", pid)
+
+	content, err := os.ReadFile(cmdFileName)
+	if err != nil {
+		return "", err
+	}
+
+	if len(content) == 0 {
+		return "", nil
+	}
+
+	index := bytes.IndexByte(content, 0)
+
+	var cmdPath []byte
+
+	if index > -1 {
+		cmdPath = content[:index]
+	} else {
+		cmdPath = content
+	}
+
+	if len(cmdPath) == 0 {
+		return "", nil
+	}
+
+	return string(cmdPath), nil
 }
 
 func ParseProcess(r io.Reader) Process {

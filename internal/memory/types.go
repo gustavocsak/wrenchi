@@ -25,4 +25,5 @@ type Process struct {
 	State string
 	Uid   IDs
 	Gid   IDs
+	Cmd   string
 }
