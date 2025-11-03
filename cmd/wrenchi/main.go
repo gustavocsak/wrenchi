@@ -22,17 +22,17 @@ func main() {
 		memoryCmd := flag.NewFlagSet("memory", flag.ExitOnError)
 		showTopMem := memoryCmd.Int("t", 0, "Show top t processes by memory use")
 		memoryCmd.Parse(os.Args[2:])
-		memInfo, error := memory.ReadMemInfo()
-		if error != nil {
-			fmt.Println("error")
+		memInfo, err := memory.ReadMemInfo()
+		if err != nil {
+			fmt.Println(err)
 		}
 		display.PrintMemoryInfo(memInfo)
 		if *showTopMem != 0 {
 			processes, err := memory.ReadProcStatus()
 			if err != nil {
-				fmt.Println("error")
+				fmt.Println(err)
 			}
-			display.PrintProcesses(processes, *showTopMem)
+			display.PrintProcesses(processes, *showTopMem, memInfo)
 		}
 
 	default:

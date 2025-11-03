@@ -69,3 +69,39 @@ func TestParseMem(t *testing.T) {
 		t.Errorf("Expected %v, got %v instead.", swapFree, m.SwapFree)
 	}
 }
+
+func TestParseIds(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     []string
+		want      memory.IDs
+		expectErr bool
+	}{
+		{
+			name:  "Valid ids",
+			input: []string{"1000", "1000", "1000", "1000"},
+			want:  memory.IDs{Real: 1000, Effective: 1000, Saved: 1000, FS: 1000},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := memory.ParseId(tt.input)
+
+			if tt.expectErr {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if got != tt.want {
+				t.Errorf("expected %+v, got %+v", tt.want, got)
+			}
+		})
+	}
+}

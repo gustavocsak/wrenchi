@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"strconv"
 	"strings"
 )
@@ -92,63 +93,126 @@ func ParseMemInfo(r io.Reader) (*MemoryInfo, error) {
 }
 
 func ReadProcStatus() ([]Process, error) {
-	var processes []Process
-	files, err := os.ReadDir("/proc")
+	dirs, err := os.ReadDir("/proc")
 	if err != nil {
 		return nil, err
 	}
 
-	for _, file := range files {
-		if file.IsDir() {
-			if s, err := strconv.ParseInt(file.Name(), 10, 64); err == nil {
-				processFile := fmt.Sprintf("/proc/%d/status", s)
-				file, err := os.Open(processFile)
+	var processes []Process
+
+	for _, entry := range dirs {
+		if entry.IsDir() {
+			if s, err := strconv.ParseUint(entry.Name(), 10, 64); err == nil {
+				p, err := openProcessFile(s)
 				if err != nil {
 					continue
 				}
-				scanner := bufio.NewScanner(file)
-				process := Process{}
-
-				defer file.Close()
-
-				for scanner.Scan() {
-					line := scanner.Text()
-					parts := strings.Fields(line)
-
-					if len(parts) < 2 {
-						continue
-					}
-
-					key := parts[0]
-					value := parts[1]
-
-					switch key {
-					case "Name:":
-						process.Name = strings.Join(parts[1:], " ")
-
-					case "Pid:":
-						pid, err := strconv.ParseUint(value, 10, 64)
-						if err == nil {
-							process.Pid = pid
-						}
-
-					case "State:":
-						process.State = value
-
-					case "VmRSS:":
-						vmrss, err := strconv.ParseUint(value, 10, 64)
-						if err == nil {
-							process.VmRSS = vmrss
-						}
-					}
-
-				}
-
-				processes = append(processes, process)
+				processes = append(processes, p)
 			}
 		}
 	}
 
 	return processes, nil
+}
 
+func openProcessFile(pid uint64) (Process, error) {
+	processFileName := fmt.Sprintf("/proc/%d/status", pid)
+
+	file, err := os.Open(processFileName)
+	if err != nil {
+		return Process{}, err
+	}
+	defer file.Close()
+
+	p := ParseProcess(file)
+	return p, nil
+}
+
+func ParseProcess(r io.Reader) Process {
+	scanner := bufio.NewScanner(r)
+	process := Process{}
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Fields(line)
+
+		if len(parts) < 2 {
+			continue
+		}
+
+		key := parts[0]
+		value := parts[1]
+
+		switch key {
+		case "Name:":
+			process.Name = strings.Join(parts[1:], " ")
+
+		case "Pid:":
+			pid, err := strconv.ParseUint(value, 10, 64)
+			if err == nil {
+				process.Pid = pid
+			}
+
+		case "State:":
+			process.State = value
+
+		case "VmRSS:":
+			vmrss, err := strconv.ParseUint(value, 10, 64)
+			if err == nil {
+				process.VmRSS = vmrss
+			}
+
+		case "Uid:":
+			id := strings.TrimSpace(parts[1])
+			user, err := user.LookupId(id)
+			if err == nil {
+				process.User = user.Username
+			}
+			uid, err := ParseId(parts[1:])
+			if err == nil {
+				process.Uid = uid
+			}
+
+		case "Gid:":
+			group, err := user.LookupGroupId(parts[1])
+			if err == nil {
+				process.Group = group.Name
+			}
+
+			gid, err := ParseId(parts[1:])
+			if err == nil {
+				process.Gid = gid
+			}
+		}
+
+	}
+
+	return process
+
+}
+
+func ParseId(ids []string) (IDs, error) {
+	var rid IDs
+	if len(ids) < 4 || len(ids) > 5 {
+		return IDs{}, fmt.Errorf("Unable to parse ids from process file")
+	}
+
+	for i, v := range ids {
+		id, err := strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			return IDs{}, err
+		}
+		switch i {
+		case 0:
+			rid.Effective = uint(id)
+		case 1:
+			rid.Real = uint(id)
+		case 2:
+			rid.Saved = uint(id)
+		case 3:
+			rid.FS = uint(id)
+		}
+	}
+
+	return rid, nil
 }
