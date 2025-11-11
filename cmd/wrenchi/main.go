@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"wrenchi/internal/cpu"
 	"wrenchi/internal/display"
 	"wrenchi/internal/memory"
 )
@@ -34,7 +35,12 @@ func main() {
 			}
 			display.PrintProcesses(processes, *showTopMem, memInfo)
 		}
-
+	case "cpu":
+		stats, err := cpu.ReadCPUStat()
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(stats)
 	default:
 		log.Fatalf("Invalid subcommand: %s", subCommand)
 		os.Exit(1)
