@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+type CPUInfo struct {
+	name string
+	mhzs []float64
+}
+
 func ReadCPUStat() (CPUStats, error) {
 	statFile, err := os.Open("/proc/stat")
 	if err != nil {
@@ -25,16 +30,24 @@ func ReadCPUStat() (CPUStats, error) {
 		return stats, err
 	}
 	defer cpuInfoFile.Close()
-	stats.CPU, err = ParseCPUInfo(cpuInfoFile)
+	cpuInfo, err := ParseCPUInfo(cpuInfoFile)
 	if err != nil {
 		return stats, err
+	}
+	stats.CPU = cpuInfo.name
+
+	for i, v := range cpuInfo.mhzs {
+		if i < len(stats.PerCore) {
+			stats.PerCore[i].MHz = v
+		}
 	}
 
 	return stats, nil
 }
 
-func ParseCPUInfo(r io.Reader) (string, error) {
+func ParseCPUInfo(r io.Reader) (CPUInfo, error) {
 	scanner := bufio.NewScanner(r)
+	info := CPUInfo{}
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -44,11 +57,25 @@ func ParseCPUInfo(r io.Reader) (string, error) {
 			if len(parts) < 2 {
 				continue
 			}
-			return strings.TrimSpace(parts[1]), nil
+			info.name = strings.TrimSpace(parts[1])
+		}
+
+		if strings.HasPrefix(line, "cpu MHz") {
+			parts := strings.Split(line, ":")
+			if len(parts) < 2 {
+				continue
+			}
+
+			mhz, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+			if err != nil {
+				return CPUInfo{}, err
+			}
+			info.mhzs = append(info.mhzs, mhz)
+
 		}
 	}
 
-	return "", fmt.Errorf("cpu model name not found in cpuinfo")
+	return info, nil
 
 }
 

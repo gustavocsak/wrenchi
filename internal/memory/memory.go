@@ -11,18 +11,18 @@ import (
 	"strings"
 )
 
-func ReadMemInfo() (*MemoryInfo, error) {
+func ReadMemInfo() (MemoryInfo, error) {
 	file, err := os.Open("/proc/meminfo")
 
 	if err != nil {
-		return nil, err
+		return MemoryInfo{}, err
 	}
 	defer file.Close()
 	return ParseMemInfo(file)
 }
 
-func ParseMemInfo(r io.Reader) (*MemoryInfo, error) {
-	memInfo := &MemoryInfo{}
+func ParseMemInfo(r io.Reader) (MemoryInfo, error) {
+	memInfo := MemoryInfo{}
 	scanner := bufio.NewScanner(r)
 
 	for scanner.Scan() {

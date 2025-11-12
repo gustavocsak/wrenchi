@@ -16,6 +16,7 @@ type CoreStats struct {
 	IOWait  uint64
 	IRQ     uint64
 	SoftIRQ uint64
+	MHz     float64
 }
 
 type CorePercentages struct {
