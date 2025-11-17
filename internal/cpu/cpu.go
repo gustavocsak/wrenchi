@@ -156,3 +156,29 @@ func parseCoreStats(parts []string) (CoreStats, error) {
 
 	return core, nil
 }
+
+func CalculateCPUUsage(prev, curr CoreStats) float64 {
+	prevTotal := prev.User + prev.Nice + prev.System + prev.Idle +
+		prev.IOWait + prev.IRQ + prev.SoftIRQ
+	currTotal := curr.User + curr.Nice + curr.System + curr.Idle +
+		curr.IOWait + curr.IRQ + curr.SoftIRQ
+
+	totalDelta := currTotal - prevTotal
+	if totalDelta == 0 {
+		return 0
+	}
+
+	idleDelta := (curr.Idle + curr.IOWait) - (prev.Idle + prev.IOWait)
+	busyDelta := totalDelta - idleDelta
+
+	usage := 100.0 * float64(busyDelta) / float64(totalDelta)
+
+	// clamp 0-100
+	switch {
+	case usage < 0:
+		return 0
+	case usage > 100:
+		return 100
+	}
+	return usage
+}
