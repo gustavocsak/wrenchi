@@ -3,22 +3,34 @@ package ui
 import (
 	"time"
 	"wrenchi/internal/cpu"
+	"wrenchi/internal/logger"
 	"wrenchi/internal/memory"
+	"wrenchi/internal/process"
 
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type model struct {
-	memoryStats memory.MemoryInfo
-	cpuStats    cpu.CPUStats
-	selected    string
-	lastUpdate  time.Time
+	memoryStats   memory.MemoryInfo
+	cpuStats      cpu.CPUStats
+	cpuPrev       cpu.CPUStats
+	cpuHistory    [][]float64
+	maxHistory    int
+	processTable  table.Model
+	processes     []process.ProcessInfo
+	lastUpdate    time.Time
+	width         int
+	height        int
+	theme         Theme
+	hostname      string
+	logger        *logger.Logger
+	coreViewCache map[int]string
+	cacheDirty    bool
 }
 
-// tickMsg is sent on every timer tick
 type tickMsg time.Time
 
-// tick returns a Cmd that waits for the refresh interval and then sends a tickMsg
 func tick() tea.Cmd {
 	return tea.Tick(time.Second*1, func(t time.Time) tea.Msg {
 		return tickMsg(t)
@@ -26,6 +38,5 @@ func tick() tea.Cmd {
 }
 
 func (m model) Init() tea.Cmd {
-	// Start the ticker when the program starts
 	return tick()
 }
