@@ -5,6 +5,7 @@ type CPUStats struct {
 	Total   CoreStats
 	PerCore []CoreStats
 	Uptime  string
+	AvgFreq string
 }
 
 type CoreStats struct {

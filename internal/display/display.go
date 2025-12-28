@@ -2,12 +2,13 @@ package display
 
 import (
 	"fmt"
-	"github.com/charmbracelet/bubbles/progress"
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/lipgloss"
 	"sort"
 	"strconv"
 	"wrenchi/internal/memory"
+
+	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func PrintMemoryInfo(info *memory.MemoryInfo) {

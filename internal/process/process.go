@@ -11,7 +11,7 @@ import (
 )
 
 // reads all processes from /proc and returns them sorted by CPU usage
-func ReadProcesses(limit int) ([]ProcessInfo, error) {
+func ReadProcesses(limit int) ([]Process, error) {
 	totalMemKB, err := getTotalMemory()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get total memory: %w", err)
@@ -40,8 +40,8 @@ func ReadProcesses(limit int) ([]ProcessInfo, error) {
 		totalCPUTime += p.CPUTime
 	}
 
-	var infos []ProcessInfo
-	for _, p := range processes {
+	for i := range len(processes) {
+		p := &processes[i]
 		var cpuPercent float64
 		if totalCPUTime > 0 {
 			cpuPercent = (float64(p.CPUTime) / float64(totalCPUTime)) * 100.0
@@ -52,24 +52,19 @@ func ReadProcesses(limit int) ([]ProcessInfo, error) {
 		memKB := (p.RSS * pageSize) / 1024
 		memPercent := (float64(memKB) / float64(totalMemKB)) * 100.0
 
-		infos = append(infos, ProcessInfo{
-			PID:        p.PID,
-			Name:       p.Name,
-			CPUPercent: cpuPercent,
-			MemPercent: memPercent,
-			Command:    p.Command,
-		})
+		p.CPUPercent = cpuPercent
+		p.MemPercent = memPercent
+		p.MemKB = memKB
 	}
 
-	sort.Slice(infos, func(i, j int) bool {
-		return infos[i].CPUPercent > infos[j].CPUPercent
+	sort.Slice(processes, func(i, j int) bool {
+		return processes[i].CPUPercent > processes[j].CPUPercent
 	})
-
-	if limit > 0 && limit < len(infos) {
-		infos = infos[:limit]
+	if limit > 0 && limit < len(processes) {
+		processes = processes[:limit]
 	}
 
-	return infos, nil
+	return processes, nil
 }
 
 // reads a single process from /proc/[pid]
