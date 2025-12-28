@@ -29,7 +29,7 @@ func NewProgram() *tea.Program {
 	processes, err := process.ReadProcesses(30)
 	if err != nil {
 		log.Printf("warning: failed to read processes: %v", err)
-		processes = []process.ProcessInfo{}
+		processes = []process.Process{}
 	}
 
 	columns := []table.Column{

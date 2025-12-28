@@ -18,7 +18,7 @@ type model struct {
 	cpuHistory    [][]float64
 	maxHistory    int
 	processTable  table.Model
-	processes     []process.ProcessInfo
+	processes     []process.Process
 	lastUpdate    time.Time
 	width         int
 	height        int

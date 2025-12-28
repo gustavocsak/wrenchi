@@ -1,5 +1,6 @@
 // Taken from https://github.com/leg100
 // All credits to leg100 for the border title function in bubble tea
+// Some changes made to border render and accepting a theme
 
 package ui
 
@@ -8,12 +9,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-)
-
-// Color constants for borders
-var (
-	Blue                  = lipgloss.Color("#1077e5")
-	InactivePreviewBorder = lipgloss.Color("240")
 )
 
 // pane models expose metadata to be embedded in certain positions in borders:
@@ -49,30 +44,30 @@ const (
 	BottomRightBorder
 )
 
-func borderize(content string, active bool, embeddedText map[BorderPosition]string) string {
+func borderize(content string, active bool, embeddedText map[BorderPosition]string, t Theme) string {
 	if embeddedText == nil {
 		embeddedText = make(map[BorderPosition]string)
 	}
-
-	// Always use rounded borders for consistent minimalist aesthetic
-	border := lipgloss.RoundedBorder()
-
-	// Use theme colors
-	theme := DefaultTheme()
-	color := map[bool]lipgloss.TerminalColor{
-		true:  theme.BorderActive,
-		false: theme.Border,
-	}
-
-	style := lipgloss.NewStyle().Foreground(color[active])
-	width := lipgloss.Width(content)
+	var (
+		thickness = map[bool]lipgloss.Border{
+			true:  lipgloss.Border(lipgloss.ThickBorder()),
+			false: lipgloss.Border(lipgloss.NormalBorder()),
+		}
+		color = map[bool]lipgloss.TerminalColor{
+			true:  t.BorderActive,
+			false: t.Border,
+		}
+		border = thickness[active]
+		style  = lipgloss.NewStyle().Foreground(color[active])
+		width  = lipgloss.Width(content)
+	)
 
 	encloseInSquareBrackets := func(text string) string {
 		if text != "" {
 			return fmt.Sprintf("%s%s%s",
-				style.Render(border.TopRight),
+				style.Render(border.Bottom),
 				text,
-				style.Render(border.TopLeft),
+				style.Render(border.Bottom),
 			)
 		}
 		return text

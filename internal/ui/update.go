@@ -5,6 +5,7 @@ import (
 	"wrenchi/internal/cpu"
 	"wrenchi/internal/memory"
 	"wrenchi/internal/process"
+	cpu_util "wrenchi/internal/util"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -42,9 +43,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cpuStats, err := cpu.ReadCPUStat()
 		if err == nil {
 			m.cpuStats = cpuStats
+			var avgFreq float64
 
 			// update each core history
-			for i := range cpuStats.PerCore {
+			for i, core := range cpuStats.PerCore {
 				if i < len(m.cpuPrev.PerCore) && i < len(m.cpuHistory) {
 					usage := cpu.CalculateCPUUsage(m.cpuPrev.PerCore[i], cpuStats.PerCore[i])
 
@@ -53,8 +55,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if len(m.cpuHistory[i]) > m.maxHistory {
 						m.cpuHistory[i] = m.cpuHistory[i][len(m.cpuHistory[i])-m.maxHistory:]
 					}
+
+					if core.MHz > 0 {
+						avgFreq += core.MHz
+					}
 				}
 			}
+
+			if avgFreq > 0 {
+				avgFreq = avgFreq / float64(len(cpuStats.PerCore))
+				m.cpuStats.AvgFreq = cpu_util.FormatGHz(avgFreq)
+			}
+
 		} else {
 			m.logger.Printf("Error reading CPU stats: %v", err)
 		}

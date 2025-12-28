@@ -7,6 +7,7 @@ import (
 	"wrenchi/internal/cpu"
 	"wrenchi/internal/process"
 	"wrenchi/internal/system"
+	cpu_util "wrenchi/internal/util"
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
@@ -177,7 +178,7 @@ func (m model) renderSystemSummary(maxHeight int) string {
 	usageStyle := m.theme.UsageStyle(cpuUsage)
 	s.WriteString(fmt.Sprintf("CPU  %s %s\n",
 		cpuBar,
-		usageStyle.Render(fmt.Sprintf("%5.1f%%", cpuUsage))))
+		usageStyle.Render(fmt.Sprintf("%5.1f%% | %s", cpuUsage, m.cpuStats.AvgFreq))))
 
 	// memory usage bar
 	memUsed := m.memoryStats.Total - m.memoryStats.Available
@@ -197,7 +198,7 @@ func (m model) renderSystemSummary(maxHeight int) string {
 
 	return borderize(content, true, map[BorderPosition]string{
 		TopLeftBorder: "wrenchi",
-	})
+	}, m.theme)
 }
 
 // creates a colored progress bar using block characters
@@ -299,12 +300,10 @@ func (m model) renderProcessTable(height, width int) string {
 		minCommandWidth   = 14
 	)
 
-	m.logger.Printf("process mem: %v\n", m.processes[0].CPUPercent)
 	commandWidth := width - fixedColumnsWidth - tablePadding
 	if commandWidth < minCommandWidth {
 		commandWidth = minCommandWidth
 	}
-	m.logger.Printf("cmd width: %d\n", commandWidth)
 
 	columns := []table.Column{
 		{Title: "PID", Width: 8},
@@ -331,7 +330,7 @@ func (m model) renderProcessTable(height, width int) string {
 		TopLeftBorder:     "processes",
 		BottomLeftBorder:  helpText,
 		BottomRightBorder: scrollInfo,
-	})
+	}, m.theme)
 }
 
 // returns the number of columns for per-core usage
@@ -357,7 +356,7 @@ func (m model) renderPerCoreAdaptiveGrid(maxHeight, width int) string {
 	if len(cores) == 0 {
 		return borderize("No CPU cores detected", true, map[BorderPosition]string{
 			TopLeftBorder: "cpu cores",
-		})
+		}, m.theme)
 	}
 
 	contentHeight := maxHeight - 2
@@ -371,26 +370,15 @@ func (m model) renderPerCoreAdaptiveGrid(maxHeight, width int) string {
 		sparkWidth = 0
 	}
 
-	var totalUsage float64
 	var maxUsage float64
-	var avgFreq float64
 	for i, core := range cores {
 		var usage float64
 		if i < len(m.cpuPrev.PerCore) {
 			usage = cpu.CalculateCPUUsage(m.cpuPrev.PerCore[i], core)
 		}
-		totalUsage += usage
 		if usage > maxUsage {
 			maxUsage = usage
 		}
-		if core.MHz > 0 {
-			avgFreq += core.MHz
-		}
-	}
-	avgUsage := totalUsage / float64(len(cores))
-	if avgFreq > 0 {
-		avgFreq = avgFreq / float64(len(cores))
-		avgFreq = avgFreq / 1000.0
 	}
 
 	var gridRows []string
@@ -418,12 +406,14 @@ func (m model) renderPerCoreAdaptiveGrid(maxHeight, width int) string {
 	content = constrainedStyle.Render(content)
 
 	statsStyle := lipgloss.NewStyle().Foreground(m.theme.TextDim)
+
+	borderInfo := fmt.Sprintf(" peak: %.1f%% ", maxUsage)
 	borderLabels := map[BorderPosition]string{
 		TopLeftBorder:  "cpu cores",
-		TopRightBorder: statsStyle.Render(fmt.Sprintf(" avg: %.1f%% │ peak: %.1f%% | avg freq: %.1fGHz ", avgUsage, maxUsage, avgFreq)),
+		TopRightBorder: statsStyle.Render(borderInfo),
 	}
 
-	return borderize(content, true, borderLabels)
+	return borderize(content, true, borderLabels, m.theme)
 }
 
 // renders a single core cell with optional sparkline and frequency
@@ -482,7 +472,7 @@ func (m model) renderCoreCell(coreIdx int, cellWidth int, sparklineWidth int) st
 }
 
 // converts process info to table rows
-func processesToRows(processes []process.ProcessInfo, cpuUsage float64) []table.Row {
+func processesToRows(processes []process.Process, cpuUsage float64) []table.Row {
 	var rows []table.Row
 	for _, p := range processes {
 		pid := fmt.Sprintf("%d", p.PID)
@@ -491,7 +481,7 @@ func processesToRows(processes []process.ProcessInfo, cpuUsage float64) []table.
 			actualPercent = (p.CPUPercent / 100.0) * cpuUsage
 		}
 		cpuPercent := fmt.Sprintf("%.1f%%", actualPercent)
-		memPercent := fmt.Sprintf("%.1f%%", p.MemPercent)
+		memPercent := fmt.Sprintf("%s", cpu_util.FormatMemory(p.MemKB))
 
 		// get command up to a space
 		cmd := strings.Fields(p.Command)[0]
